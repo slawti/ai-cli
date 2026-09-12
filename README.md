@@ -247,9 +247,7 @@ Planned or potential improvements include:
 
 ## License
 
-This project is currently provided without a specific license.
-
-If you plan to allow others to use, modify, and redistribute the project, consider adding an open-source license such as the MIT License.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for the full license text.
 
 ## Disclaimer
 
