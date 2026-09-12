@@ -18,7 +18,7 @@ client = OpenAI(
 )
 
 
-MODEL = "nvidia/nemotron-3-embed-1b:free"
+MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
 
 messages = []
 
@@ -26,9 +26,14 @@ messages = []
 while True:
     user_input = input("\nYou: ")
 
-    if user_input.lower() == "exit":
+    if user_input.lower() == "/exit":
         print("Goodbye!")
         break
+
+    if user_input.lower() == "/clear":
+        messages = []
+        print("Conversation cleared.")
+        continue
 
     messages.append({
         "role": "user",
@@ -38,13 +43,23 @@ while True:
     response = client.chat.completions.create(
         model=MODEL,
         messages=messages,
+        stream=True
     )
 
-    answer = response.choices[0].message.content
+    answer = ""
+
+    print("\nAI: ", end="", flush=True)
+
+    for chunk in response:
+        text = chunk.choices[0].delta.content
+
+        if text:
+            print(text, end="", flush=True)
+            answer += text
+
+    print()
 
     messages.append({
         "role": "assistant",
         "content": answer,
     })
-
-    print(f"\nAI: {answer}")
