@@ -55,7 +55,7 @@ pip install -r requirements.txt
 
 ## Configuration
 
-The application uses a `.env` file to store your OpenRouter API key.
+The application uses a `.env` file to store your OpenRouter API key and model configuration.
 
 Create a file named:
 
@@ -67,9 +67,11 @@ Add:
 
 ```env
 OPENROUTER_API_KEY=your_api_key_here
+MODEL=nvidia/nemotron-3-super-120b-a12b:free
 ```
 
 Replace `your_api_key_here` with your actual OpenRouter API key.
+The `MODEL` can be any model available on OpenRouter (see [OpenRouter Models](https://openrouter.ai/models)).
 
 ### Security
 
@@ -128,6 +130,14 @@ Conversation cleared.
 
 The next message starts a new conversation.
 
+### `/help`
+
+Shows the help message with all available commands.
+
+```text
+You: /help
+```
+
 ### `/exit`
 
 Closes the application.
@@ -150,10 +160,10 @@ client = OpenAI(
 )
 ```
 
-The model is currently configured as:
+The model is currently configured via the `.env` file:
 
 ```python
-MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+MODEL = os.getenv("MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
 ```
 
 The conversation is stored in a Python list:
@@ -207,6 +217,7 @@ The project currently uses:
 
 * [OpenAI Python SDK](https://github.com/openai/openai-python) — API client
 * [python-dotenv](https://github.com/theskumar/python-dotenv) — loads environment variables from `.env`
+* [Rich](https://github.com/Textualize/rich) — colored terminal output and markdown rendering
 
 Install them with:
 
