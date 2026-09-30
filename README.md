@@ -1,33 +1,50 @@
-# AI CLI
+# ai-cli
 
-A simple command-line AI chatbot written in Python using the [OpenRouter](https://openrouter.ai/) API and the OpenAI Python SDK.
+A polished command-line AI chatbot in Python, powered by the [OpenRouter](https://openrouter.ai/) API through the OpenAI Python SDK.
 
-The program allows you to have a continuous conversation with an AI directly from your terminal, with responses streamed progressively as they are generated.
+Chat with hundreds of models from your terminal — with streaming Markdown responses, Tab-completed model switching, a live model catalog, and conversation export.
 
-## Features
+```text
+╭─────────────────────────────── Welcome ───────────────────────────────╮
+│ ai-cli v0.2.0 — OpenRouter chat                                       │
+│ Model: nvidia/nemotron-3-super-120b-a12b:free                         │
+│ 464 models (20 free) loaded. Press Tab after /model for suggestions.  │
+│ Enter sends · Alt+Enter newline · Ctrl+D exits · /help for commands   │
+╰───────────────────────────────────────────────────────────────────────╯
+```
 
-* Command-line chat interface
-* Streaming AI responses
-* Conversation history during the current session
-* OpenRouter API support
-* Configurable API key through environment variables
-* `/clear` command to reset the conversation
-* `/model` command with Tab autocomplete to view or switch models mid-session
-* `/models` browser with free-filter and live OpenRouter catalog
-* `/md` toggle and Markdown-rendered streaming responses
-* Welcome banner, status bar, and spinners
-* Persistent input history and multiline input (Enter sends, Alt+Enter newline)
-* `/save` command to export the conversation to Markdown
-* `SYSTEM_PROMPT` support for a default persona via `.env`
-* `/exit` command to close the application
+## ✨ Features
 
-## Requirements
+| Area | What you get |
+|------|--------------|
+| 💬 Chat | Continuous conversation with streaming responses, rendered as Markdown |
+| 🤖 Models | Live OpenRouter catalog (400+ models) with free/paid labels |
+| ⌨️ Input | Tab autocomplete, persistent history, multiline (Enter sends, Alt+Enter newline) |
+| 🎨 Interface | Welcome banner, status bar, spinners, styled tables and error panels |
+| 💾 Export | `/save` exports the session to a Markdown file |
+| ⚙️ Config | API key, default model, and persona via `.env`; `--model` / `--no-markdown` flags |
+
+### Slash commands
+
+| Command | Description |
+|---------|-------------|
+| `/help` | Show all commands |
+| `/model` | Show the current model |
+| `/model <name>` | Switch models — Tab completes, fuzzy search, or pick by number |
+| `/models [query] [--free]` | Browse/search the live OpenRouter catalog |
+| `/models --refresh` | Re-fetch the catalog |
+| `/md` | Toggle Markdown rendering on/off |
+| `/clear` | Reset conversation history (keeps system prompt) |
+| `/save [file]` | Export conversation to Markdown (system prompt excluded) |
+| `/exit` | Quit |
+
+## 📋 Requirements
 
 * Python 3.9 or newer
-* An OpenRouter API key
+* An [OpenRouter API key](https://openrouter.ai/keys)
 * Internet connection
 
-## Installation
+## 🚀 Installation
 
 ### 1. Clone the repository
 
@@ -36,18 +53,16 @@ git clone https://github.com/slawti/ai-cli.git
 cd ai-cli
 ```
 
-### 2. Create a virtual environment
+### 2. Create a virtual environment (recommended)
 
-Creating a virtual environment is recommended to keep the project's dependencies separate from your other Python projects.
-
-#### Windows
+**Windows (PowerShell):**
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\activate
 ```
 
-#### Linux / macOS
+**Linux / macOS:**
 
 ```bash
 python3 -m venv .venv
@@ -60,19 +75,11 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-This installs dependencies and the `ai-cli` command.
+This installs all dependencies and the `ai-cli` command.
 
-## Configuration
+## 🔧 Configuration
 
-The application uses a `.env` file to store your OpenRouter API key and model configuration.
-
-Create a file named:
-
-```text
-.env
-```
-
-Add:
+Create a `.env` file in the project root:
 
 ```env
 OPENROUTER_API_KEY=your_api_key_here
@@ -80,123 +87,84 @@ MODEL=nvidia/nemotron-3-super-120b-a12b:free
 SYSTEM_PROMPT=You are a helpful assistant.
 ```
 
-Replace `your_api_key_here` with your actual OpenRouter API key.
-The `MODEL` can be any model available on OpenRouter (see [OpenRouter Models](https://openrouter.ai/models)).
-The optional `SYSTEM_PROMPT` sets a persona or default instructions. It is sent as a `system` message with every request and is preserved across `/clear`. Omit it or leave it empty for no system prompt.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENROUTER_API_KEY` | ✅ | Your OpenRouter API key |
+| `MODEL` | ❌ | Default model (any slug from [OpenRouter Models](https://openrouter.ai/models)) |
+| `SYSTEM_PROMPT` | ❌ | Persona/instructions sent as a `system` message; preserved across `/clear` |
 
-### Security
+> **🔒 Security:** never commit `.env` — it's already in `.gitignore`. If a key leaks, revoke it immediately at [openrouter.ai/keys](https://openrouter.ai/keys).
 
-**Never commit your `.env` file to GitHub.**
-
-The repository's `.gitignore` should contain:
-
-```gitignore
-.env
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-```
-
-Your API key should remain local to your machine.
-
-If an API key is accidentally pushed to GitHub, revoke it immediately and generate a new one.
-
-## Usage
-
-Start the application with:
+## 🖥️ Usage
 
 ```bash
 ai-cli
 ```
 
-Options:
+With options:
 
 ```bash
-ai-cli --help
-ai-cli --model openai/gpt-4o-mini
-ai-cli --no-markdown
+ai-cli --model openai/gpt-4o-mini   # start with a specific model
+ai-cli --no-markdown                # plain-text streaming instead of Markdown
+ai-cli --help                       # show all options
 ```
 
-(`python -m ai_cli` and the legacy `python main.py` still work.)
+> Alternatives: `python -m ai_cli`, or the legacy `python main.py`.
 
-You should see:
-
-```text
-You:
-```
-
-Enter a message and the AI will respond.
-
-Example:
+### Example session
 
 ```text
 You: What is Linux?
 
-AI: Linux is an open-source operating system kernel...
-```
+AI: **Linux** is an open-source operating system kernel...
+    (streams live, rendered as Markdown with highlighted code blocks)
 
-Responses are streamed progressively rather than waiting for the entire response to be generated.
+You: /model gpt<Tab>
+  → openai/gpt-4o-mini [free] ...
 
-## Commands
-
-### `/clear`
-
-Clears the current conversation history.
-
-```text
-You: /clear
-Conversation cleared.
-```
-
-The next message starts a new conversation.
-
-### `/help`
-
-Shows the help message with all available commands.
-
-```text
-You: /help
-```
-
-### `/model`
-
-Shows the current model, or switches to a different model mid-session. Conversation history is kept.
-
-```text
-You: /model
-Current model: nvidia/nemotron-3-super-120b-a12b:free
-
-You: /model openai/gpt-4o-mini
-Switched model to openai/gpt-4o-mini
-```
-
-### `/save`
-
-Exports the current conversation to a Markdown file. The system prompt is excluded.
-
-```text
-You: /save
-Conversation saved to chat_20260101_120000.md
+You: /models llama --free
+  → table of matching free models; pick with /model 2
 
 You: /save mychat
 Conversation saved to mychat.md
-```
 
-### `/exit`
-
-Closes the application.
-
-```text
 You: /exit
 Goodbye!
 ```
 
-## How It Works
+### ⌨️ Keyboard shortcuts
 
-The application uses the OpenAI Python SDK with OpenRouter's OpenAI-compatible API.
+| Key | Action |
+|-----|--------|
+| `Enter` | Send message |
+| `Alt` + `Enter` | New line (multiline input) |
+| `Tab` | Autocomplete commands and model names |
+| `↑` / `↓` | Recall input history (persists in `~/.ai_cli_history`) |
+| `Ctrl` + `C` | Interrupt current generation |
+| `Ctrl` + `D` | Exit |
 
-The client is configured with:
+## 🏗️ Project structure
+
+```text
+ai-cli/
+├── ai_cli/               # application package
+│   ├── cli.py            # entry point, main loop, command dispatch
+│   ├── config.py         # .env loading, settings, --model/--no-markdown flags
+│   ├── models.py         # OpenRouter catalog fetch, free-filter, search
+│   ├── chat.py           # API client, Markdown streaming, conversation export
+│   ├── ui.py             # banner, status bar, tables, spinners, error panels
+│   └── complete.py       # Tab completion for commands and model ids
+├── main.py               # backwards-compatible shim (use `ai-cli` instead)
+├── pyproject.toml        # packaging, dependencies, ai-cli console script
+├── requirements.txt      # pinned dev/venv install (alternative to pip install -e .)
+├── README.md
+├── LICENSE
+└── .env                  # local only — never committed
+```
+
+## ⚙️ How it works
+
+**Client** — the [OpenAI Python SDK](https://github.com/openai/openai-python) pointed at OpenRouter's OpenAI-compatible endpoint:
 
 ```python
 client = OpenAI(
@@ -205,106 +173,39 @@ client = OpenAI(
 )
 ```
 
-The model is currently configured via the `.env` file:
+**Catalog** — `GET https://openrouter.ai/api/v1/models` (public, no auth) fetched fresh each session; a model counts as free when prompt + completion pricing are `0` or the id ends with `:free`.
 
-```python
-MODEL = os.getenv("MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
-```
+**Streaming** — responses use `stream=True`; chunks render live into Markdown (with a `thinking…` spinner until the first token), then the full turn is appended to history so context carries forward. `--no-markdown` or `/md` switches to plain-text streaming.
 
-The conversation is stored in a Python list:
-
-```python
-messages = []
-```
-
-Each user and assistant message is added to this list and sent to the API with every request.
-
-### Streaming
-
-The application uses:
-
-```python
-stream=True
-```
-
-Instead of receiving the complete response at once, the API sends the response in chunks.
-
-The program processes these chunks as they arrive:
-
-```python
-for chunk in response:
-    text = chunk.choices[0].delta.content
-
-    if text:
-        print(text, end="", flush=True)
-```
-
-This creates a real-time typing effect in the terminal.
-
-The chunks are also combined into a complete response so it can be added to the conversation history.
-
-## Project Structure
-
-```text
-ai-cli/
-├── main.py
-├── requirements.txt
-├── README.md
-├── .gitignore
-└── .env
-```
-
-The `.env` file is local and should **not** be committed to the repository.
-
-## Dependencies
-
-The project currently uses:
+## 📦 Dependencies
 
 * [OpenAI Python SDK](https://github.com/openai/openai-python) — API client
-* [python-dotenv](https://github.com/theskumar/python-dotenv) — loads environment variables from `.env`
-* [Rich](https://github.com/Textualize/rich) — colored terminal output and markdown rendering
+* [python-dotenv](https://github.com/theskumar/python-dotenv) — `.env` loading
+* [Rich](https://github.com/Textualize/rich) — colors, tables, panels, Markdown, spinners
+* [prompt_toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) — Tab completion, history, multiline input
 
-Install them with:
+## 🧭 Limitations & roadmap
 
-```bash
-pip install -r requirements.txt
-```
+Current limitations:
 
-## Current Limitations
+* Single active conversation, kept in memory (export with `/save`)
+* No graphical interface
+* Long conversations are sent in full (no automatic summarization/truncation yet)
 
-This is an early version of the project.
+Ideas for the future:
 
-Currently:
+* [ ] Load conversations back from Markdown
+* [ ] Multiple named sessions
+* [ ] Token/cost tracking per session
+* [ ] Per-model parameters (temperature, max tokens)
+* [ ] Shell completion scripts for `ai-cli`
 
-* Conversations are not saved after the program closes.
-* There is only one active conversation.
-* There is no graphical interface.
-* API errors are not extensively handled.
-* The model is configured directly in the Python source.
-* There are only a small number of CLI commands.
+PRs and issues welcome at [github.com/slawti/ai-cli](https://github.com/slawti/ai-cli).
 
-## Possible Future Improvements
+## 📄 License
 
-Planned or potential improvements include:
+MIT — see [LICENSE](LICENSE).
 
-* [ ] Better API error handling
-* [ ] System prompt
-* [ ] `/help` command
-* [ ] `/model` command
-* [ ] Configurable model through `.env`
-* [ ] Save and load conversations
-* [ ] Multiple conversations
-* [ ] Improved terminal interface
-* [ ] Markdown rendering
-* [ ] Better handling of long conversations
-* [ ] Conversation export
-* [ ] Configuration file
-* [ ] More OpenRouter options
+## ⚠️ Disclaimer
 
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for the full license text.
-
-## Disclaimer
-
-This project is an independent client for the OpenRouter API and is not affiliated with OpenRouter or the model provider used by the application.
+Independent client for the OpenRouter API. Not affiliated with OpenRouter or any model provider.
