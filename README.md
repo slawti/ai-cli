@@ -12,6 +12,13 @@ The program allows you to have a continuous conversation with an AI directly fro
 * OpenRouter API support
 * Configurable API key through environment variables
 * `/clear` command to reset the conversation
+* `/model` command with Tab autocomplete to view or switch models mid-session
+* `/models` browser with free-filter and live OpenRouter catalog
+* `/md` toggle and Markdown-rendered streaming responses
+* Welcome banner, status bar, and spinners
+* Persistent input history and multiline input (Enter sends, Alt+Enter newline)
+* `/save` command to export the conversation to Markdown
+* `SYSTEM_PROMPT` support for a default persona via `.env`
 * `/exit` command to close the application
 
 ## Requirements
@@ -47,11 +54,13 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3. Install dependencies
+### 3. Install the app
 
 ```bash
-pip install -r requirements.txt
+pip install -e .
 ```
+
+This installs dependencies and the `ai-cli` command.
 
 ## Configuration
 
@@ -68,10 +77,12 @@ Add:
 ```env
 OPENROUTER_API_KEY=your_api_key_here
 MODEL=nvidia/nemotron-3-super-120b-a12b:free
+SYSTEM_PROMPT=You are a helpful assistant.
 ```
 
 Replace `your_api_key_here` with your actual OpenRouter API key.
 The `MODEL` can be any model available on OpenRouter (see [OpenRouter Models](https://openrouter.ai/models)).
+The optional `SYSTEM_PROMPT` sets a persona or default instructions. It is sent as a `system` message with every request and is preserved across `/clear`. Omit it or leave it empty for no system prompt.
 
 ### Security
 
@@ -96,8 +107,18 @@ If an API key is accidentally pushed to GitHub, revoke it immediately and genera
 Start the application with:
 
 ```bash
-python main.py
+ai-cli
 ```
+
+Options:
+
+```bash
+ai-cli --help
+ai-cli --model openai/gpt-4o-mini
+ai-cli --no-markdown
+```
+
+(`python -m ai_cli` and the legacy `python main.py` still work.)
 
 You should see:
 
@@ -136,6 +157,30 @@ Shows the help message with all available commands.
 
 ```text
 You: /help
+```
+
+### `/model`
+
+Shows the current model, or switches to a different model mid-session. Conversation history is kept.
+
+```text
+You: /model
+Current model: nvidia/nemotron-3-super-120b-a12b:free
+
+You: /model openai/gpt-4o-mini
+Switched model to openai/gpt-4o-mini
+```
+
+### `/save`
+
+Exports the current conversation to a Markdown file. The system prompt is excluded.
+
+```text
+You: /save
+Conversation saved to chat_20260101_120000.md
+
+You: /save mychat
+Conversation saved to mychat.md
 ```
 
 ### `/exit`
