@@ -1,4 +1,7 @@
-"""Terminal UI: banner, status, help, model picker, errors."""
+"""Terminal UI: banner, status, bubbles, bottom toolbar, model picker, errors."""
+
+import os
+from datetime import datetime
 
 from rich.console import Console
 from rich.markdown import Markdown
@@ -7,6 +10,26 @@ from rich.table import Table
 
 from . import __version__
 from .models import ModelCatalog, is_free_model
+from .stats import context_bar
+
+
+def create_console() -> Console:
+    """Windows-safe Console: enables VT processing when possible.
+
+    The "?[32m ... ?[0m" garbage on PowerShell happens when Rich emits
+    ANSI codes that the console doesn't interpret. Enabling VT (Win10+)
+    plus legacy_windows=True (Win32 fallback) fixes it while keeping
+    colors/panels on capable terminals.
+    """
+    if os.name == "nt":
+        try:
+            os.system("")  # enables ENABLE_VIRTUAL_TERMINAL_PROCESSING on Win10+
+        except Exception:
+            pass
+    try:
+        return Console(legacy_windows=True)
+    except TypeError:
+        return Console()
 
 
 def print_banner(
@@ -128,3 +151,59 @@ def render_answer(console: Console, answer: str, markdown_on: bool) -> None:
         except Exception:
             pass
     console.print(answer, highlight=False)
+
+
+def render_user_message(console: Console, text: str) -> None:
+    stamp = datetime.now().strftime("%H:%M")
+    console.print(
+        Panel(
+            text,
+            title="[bold cyan]You[/bold cyan]",
+            subtitle=f"[dim]{stamp}[/dim]",
+            border_style="cyan",
+            padding=(0, 1),
+        )
+    )
+
+
+def get_context_length(catalog: ModelCatalog, model: str):
+    try:
+        exact = catalog.find_exact(model)
+        if exact:
+            ctx = exact.get("context_length")
+            if isinstance(ctx, int) and ctx > 0:
+                return ctx
+    except Exception:
+        pass
+    return None
+
+
+def context_pct(stats, ctx_len) -> float | None:
+    if not ctx_len or not getattr(stats, "has_usage", False):
+        return None
+    try:
+        return stats.total_tokens / float(ctx_len)
+    except Exception:
+        return None
+
+
+def build_toolbar_html(state, stats, catalog, n_messages: int) -> str:
+    """opencode-style status lines under the input box.
+
+    Plain text (no <b>/<i>) and ASCII separators: bold/italic and "│"
+    rendered as "?[1m" garbage on some PowerShell fonts. History and
+    answers scroll above; this stays pinned under the gray input box.
+    """
+    from ai_cli.cli import _escape  # local import to avoid cycle at module load
+
+    model = str(state.get("model", "?"))
+    short = model if len(model) <= 40 else model[:39] + "…"
+    md = "md:on" if state.get("markdown") else "md:off"
+    tok = stats.token_line if stats is not None else "tokens: n/a"
+    ctx_len = get_context_length(catalog, model)
+    pct = context_pct(stats, ctx_len) if stats is not None else None
+    bar = context_bar(pct, width=8)
+    ctx_txt = f"ctx {bar}" if pct is not None else ("ctx ?" if not ctx_len else "ctx 0%")
+    line1 = f" {short} · {tok} · {ctx_txt} · msgs:{n_messages} {md}"
+    line2 = " enter: send · alt+enter: newline · tab: complete · /help"
+    return f"{_escape(line1)}\n{_escape(line2)}"

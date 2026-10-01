@@ -10,11 +10,15 @@ from .chat import build_client, save_conversation, stream_answer
 from .complete import ModelCompleter
 from .config import ConfigError, load_settings
 from .models import ModelCatalog
+from .stats import SessionStats
 from .ui import (
+    build_toolbar_html,
+    create_console,
     print_banner,
     print_error,
     print_help,
     print_status,
+    render_user_message,
     show_model_matches,
 )
 
@@ -23,6 +27,8 @@ try:
     from prompt_toolkit.formatted_text import HTML
     from prompt_toolkit.history import FileHistory
     from prompt_toolkit.key_binding import KeyBindings
+    from prompt_toolkit.patch_stdout import patch_stdout
+    from prompt_toolkit.styles import Style
 
     HAS_PROMPT_TOOLKIT = True
 except ImportError:
@@ -30,7 +36,29 @@ except ImportError:
     HTML = None  # type: ignore
     FileHistory = None  # type: ignore
     KeyBindings = None  # type: ignore
+    patch_stdout = None  # type: ignore
+    Style = None  # type: ignore
     HAS_PROMPT_TOOLKIT = False
+
+
+INPUT_STYLE = None
+
+try:
+    if Style is not None:
+        # opencode-like: neutral gray framed box, dim status line.
+        # (Blue borders + bold/italic toolbar rendered as garbage
+        # "?[1m" on some PowerShell fonts — plain gray avoids that.)
+        INPUT_STYLE = Style.from_dict(
+            {
+                "frame.border": "#6e7681",
+                "bottom-toolbar": "bg:#161b22 #8b949e",
+                "bottom-toolbar.text": "bg:#161b22 #8b949e",
+                "prompt": "#8b949e",
+                "placeholder": "#6e7681 italic",
+            }
+        )
+except Exception:
+    INPUT_STYLE = None
 
 
 def _history():
@@ -57,24 +85,39 @@ def _key_bindings():
     return kb
 
 
-def build_session(state, catalog):
-    """Prompt session with history, multiline, toolbar, completion."""
+def build_session(state, catalog, stats=None, n_messages_fn=None):
+    """opencode-style bottom input: gray framed box, status pinned below.
+
+    History + answers scroll on top (plain Rich prints); this session
+    stays pinned at the bottom with a "› " prompt and placeholder hint.
+    """
     if not HAS_PROMPT_TOOLKIT:
         return None
     try:
-        toolbar = lambda: HTML(  # noqa: E731
-            " <b>{}</b>  |  Enter: send  Alt+Enter: newline  Tab: complete  /help".format(
-                _escape(str(state["model"]))
-            )
-        )
-        return PromptSession(
+        def _toolbar():
+            try:
+                n = n_messages_fn() if n_messages_fn else 0
+                return HTML(build_toolbar_html(state, stats, catalog, n))
+            except Exception:
+                return HTML(
+                    " {}".format(
+                        _escape(str(state.get("model", "?")))
+                    )
+                )
+
+        kwargs = dict(
             completer=ModelCompleter(catalog),
             history=_history(),
             multiline=True,
             key_bindings=_key_bindings(),
-            bottom_toolbar=toolbar,
+            bottom_toolbar=_toolbar,
             complete_while_typing=False,
+            show_frame=True,
+            reserve_space_for_menu=8,
         )
+        if INPUT_STYLE is not None:
+            kwargs["style"] = INPUT_STYLE
+        return PromptSession(**kwargs)
     except Exception:
         return None
 
@@ -162,7 +205,7 @@ def handle_models_command(console, catalog, arg):
 
 
 def main(argv=None) -> int:
-    console = Console()
+    console = create_console()
     try:
         settings = load_settings(argv)
     except ConfigError as e:
@@ -208,17 +251,24 @@ def main(argv=None) -> int:
         bool(settings.system_prompt),
     )
 
-    session = build_session(state, catalog)
+    stats = SessionStats()
+    visible_count = lambda: sum(  # noqa: E731
+        1 for m in messages if m.get("role") in ("user", "assistant")
+    )
+    session = build_session(state, catalog, stats, visible_count)
 
     def read_input():
         if session is not None:
-            return session.prompt("\nYou: ")
+            message = HTML("<prompt>› </prompt>")
+            placeholder = HTML(
+                "<placeholder>Type a message...  (Enter send · Alt+Enter newline)</placeholder>"
+            )
+            if patch_stdout is not None:
+                with patch_stdout():
+                    return session.prompt(message, placeholder=placeholder)
+            return session.prompt(message, placeholder=placeholder)
         console.print("\n[bold cyan]You:[/bold cyan] ", end="")
         return input()
-
-    visible_count = lambda: sum(
-        1 for m in messages if m.get("role") in ("user", "assistant")
-    )
 
     try:
         while True:
@@ -236,7 +286,8 @@ def main(argv=None) -> int:
                         if settings.system_prompt
                         else []
                     )
-                    console.print("[green]Conversation cleared.[/green]")
+                    stats.reset()
+                    console.print("[green]Conversation + token counters cleared.[/green]")
                     print_status(
                         console, state["model"], catalog,
                         visible_count(), state["markdown"],
@@ -278,10 +329,20 @@ def main(argv=None) -> int:
                     continue
 
                 messages.append({"role": "user", "content": user_input})
+                render_user_message(console, user_input)
                 try:
-                    answer = stream_answer(
-                        console, client, state["model"], messages, state["markdown"]
+                    import time as _time
+
+                    _t0 = _time.monotonic()
+                    # NOTE: don't wrap streaming in patch_stdout() — the
+                    # prompt has already returned, and patch_stdout corrupts
+                    # Rich Live/Status cursor control (leaks "?[2K", "?[?25h"
+                    # artifacts on Windows PowerShell).
+                    answer, usage = stream_answer(
+                        console, client, state["model"],
+                        messages, state["markdown"],
                     )
+                    stats.add(usage, latency=_time.monotonic() - _t0)
                 except (APIError, RateLimitError, AuthenticationError) as e:
                     messages.pop()
                     print_error(

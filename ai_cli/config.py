@@ -11,7 +11,7 @@ class ConfigError(Exception):
     """Raised when the app cannot start (e.g. missing API key)."""
 
 
-DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+DEFAULT_MODEL = "openrouter/free"
 
 ENV_API_KEY = "OPENROUTER_API_KEY"
 ENV_MODEL = "MODEL"
