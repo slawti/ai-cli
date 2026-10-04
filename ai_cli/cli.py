@@ -40,6 +40,23 @@ except ImportError:
     Style = None  # type: ignore
     HAS_PROMPT_TOOLKIT = False
 
+try:
+    from .tui import HAS_TEXTUAL
+except ImportError:
+    HAS_TEXTUAL = False
+
+
+def _use_tui(settings) -> bool:
+    """Fullscreen TUI when requested, available, and attached to a TTY."""
+    if getattr(settings, "no_tui", False):
+        return False
+    if not HAS_TEXTUAL:
+        return False
+    try:
+        return sys.stdin.isatty() and sys.stdout.isatty()
+    except Exception:
+        return False
+
 
 INPUT_STYLE = None
 
@@ -223,6 +240,14 @@ def main(argv=None) -> int:
             catalog.refresh()
         except Exception:
             pass
+    if _use_tui(settings):
+        # Fullscreen TUI shows its own header/notices; skip legacy prints.
+        from .tui import run_tui
+
+        try:
+            return run_tui(settings, client, catalog)
+        except Exception as e:
+            console.print(f"[yellow]TUI failed to start ({e}); using legacy prompt.[/yellow]")
     if len(catalog):
         console.print(
             f"[green]Loaded {len(catalog)} models "

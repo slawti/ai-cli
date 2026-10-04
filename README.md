@@ -40,60 +40,63 @@ Chat with hundreds of models from your terminal — with streaming Markdown resp
 
 ## 📋 Requirements
 
-* Python 3.9 or newer
-* An [OpenRouter API key](https://openrouter.ai/keys)
+* Python 3.10 or newer (`python --version`)
+* An [OpenRouter API key](https://openrouter.ai/keys) — you'll paste it on first run
 * Internet connection
 
 ## 🚀 Installation
 
-### 1. Clone the repository
+No virtual environment, no config files — install once, run from anywhere.
 
-```bash
-git clone https://github.com/slawti/ai-cli.git
-cd ai-cli
-```
-
-### 2. Create a virtual environment (recommended)
-
-**Windows (PowerShell):**
+### Option 1: pipx (recommended — isolated, `ai-cli` always on PATH)
 
 ```powershell
-python -m venv .venv
-.venv\Scripts\activate
+pip install pipx
+pipx ensurepath
+# restart your terminal, then:
+pipx install git+https://github.com/slawti/ai-cli.git
 ```
 
-**Linux / macOS:**
+### Option 2: plain pip (no new tools)
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
+```powershell
+pip install --user git+https://github.com/slawti/ai-cli.git
 ```
 
-### 3. Install the app
+> If `ai-cli` isn't recognized afterwards, add Python's `Scripts` folder to PATH (the python.org installer offers this checkbox; with `pipx`, `ensurepath` handles it).
 
-```bash
+Then:
+
+```powershell
+ai-cli
+```
+
+On first run you'll be asked for your OpenRouter API key **once** — it's saved to `~/.ai-cli/.env` and never asked again.
+
+Update later with `pipx upgrade ai-cli` (or `pip install --user --upgrade git+https://github.com/slawti/ai-cli.git`).
+
+### From source (contributors only)
+
+```powershell
+git clone https://github.com/slawti/ai-cli.git
+cd ai-cli
 pip install -e .
 ```
 
-This installs all dependencies and the `ai-cli` command.
-
 ## 🔧 Configuration
 
-Create a `.env` file in the project root:
+No manual setup needed: the first-run prompt stores your key in `~/.ai-cli/.env` (outside the repo, so it works from any folder and is never committed).
 
-```env
-OPENROUTER_API_KEY=your_api_key_here
-MODEL=nvidia/nemotron-3-super-120b-a12b:free
-SYSTEM_PROMPT=You are a helpful assistant.
-```
+| Source | Precedence | Description |
+|--------|------------|-------------|
+| `--api-key KEY` | 🥇 | Key for this run only (scripts, CI) |
+| `OPENROUTER_API_KEY` env var | 🥈 | Shell export / system environment |
+| project `.env` | 🥉 | `OPENROUTER_API_KEY=…` in the current folder (dev override) |
+| `~/.ai-cli/.env` | 4th | Written by the first-run prompt; may also hold `MODEL` / `SYSTEM_PROMPT` defaults |
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `OPENROUTER_API_KEY` | ✅ | Your OpenRouter API key |
-| `MODEL` | ❌ | Default model (any slug from [OpenRouter Models](https://openrouter.ai/models)) |
-| `SYSTEM_PROMPT` | ❌ | Persona/instructions sent as a `system` message; preserved across `/clear` |
+To change the saved key later: delete `~/.ai-cli/.env` and re-run `ai-cli`, or set the env var.
 
-> **🔒 Security:** never commit `.env` — it's already in `.gitignore`. If a key leaks, revoke it immediately at [openrouter.ai/keys](https://openrouter.ai/keys).
+> **🔒 Security:** never commit any file holding your key — project `.env` files are already in `.gitignore`, and `~/.ai-cli/` lives outside the repo. If a key leaks, revoke it immediately at [openrouter.ai/keys](https://openrouter.ai/keys).
 
 ## 🖥️ Usage
 
@@ -105,7 +108,9 @@ With options:
 
 ```bash
 ai-cli --model openai/gpt-4o-mini   # start with a specific model
+ai-cli --api-key sk-or-...           # one-off key (not saved)
 ai-cli --no-markdown                # plain-text streaming instead of Markdown
+ai-cli --no-tui                     # legacy inline prompt instead of fullscreen TUI
 ai-cli --help                       # show all options
 ```
 
@@ -149,17 +154,17 @@ Goodbye!
 ai-cli/
 ├── ai_cli/               # application package
 │   ├── cli.py            # entry point, main loop, command dispatch
-│   ├── config.py         # .env loading, settings, --model/--no-markdown flags
+│   ├── tui.py            # fullscreen Textual TUI (default UI)
+│   ├── config.py         # settings, first-run key prompt, --model/--api-key/--no-tui flags
 │   ├── models.py         # OpenRouter catalog fetch, free-filter, search
 │   ├── chat.py           # API client, Markdown streaming, conversation export
-│   ├── ui.py             # banner, status bar, tables, spinners, error panels
+│   ├── ui.py             # legacy Rich output + toolbar (--no-tui)
 │   └── complete.py       # Tab completion for commands and model ids
 ├── main.py               # backwards-compatible shim (use `ai-cli` instead)
 ├── pyproject.toml        # packaging, dependencies, ai-cli console script
-├── requirements.txt      # pinned dev/venv install (alternative to pip install -e .)
 ├── README.md
 ├── LICENSE
-└── .env                  # local only — never committed
+└── .env                  # local dev override only — never committed
 ```
 
 ## ⚙️ How it works

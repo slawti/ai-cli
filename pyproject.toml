@@ -7,7 +7,7 @@ name = "ai-cli"
 version = "0.2.0"
 description = "Command-line AI chatbot using the OpenRouter API"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "slawti" }]
 dependencies = [
@@ -15,6 +15,7 @@ dependencies = [
   "python-dotenv>=1.0.0",
   "rich>=13.0.0",
   "prompt_toolkit>=3.0.0",
+  "textual>=3.0.0",
 ]
 
 [project.scripts]

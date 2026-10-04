@@ -42,6 +42,56 @@ def _short_model(model: str, limit: int = 42) -> str:
     return model[: limit - 1] + "…"
 
 
+def iter_stream_chunks(client: OpenAI, model: str, messages: list,
+                       cancel_event=None):
+    """Yield (text, usage) per stream chunk; shared by Rich CLI and Textual TUI.
+
+    `text` is delta content (None when the chunk carries no text).
+    `usage` is the OpenRouter usage object when present on the chunk.
+    When `cancel_event` is set, the underlying stream is closed and
+    iteration stops so Esc/Ctrl+C can interrupt generation.
+    """
+    response = client.chat.completions.create(
+        model=model, messages=messages, stream=True
+    )
+    try:
+        for chunk in response:
+            if cancel_event is not None:
+                try:
+                    if cancel_event.is_set():
+                        break
+                except Exception:
+                    pass
+            yield _chunk_text(chunk), _chunk_usage(chunk)
+    finally:
+        try:
+            close = getattr(response, "close", None)
+            if close is not None:
+                close()
+        except Exception:
+            pass
+
+
+def build_export_text(conversation: list, model_name: str) -> str:
+    """Pure export builder shared by the legacy CLI and the TUI."""
+    from datetime import datetime as _dt
+
+    visible = [m for m in conversation if m.get("role") in ("user", "assistant")]
+    lines = [
+        f"# Chat Export - {_dt.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        "",
+        f"Model: `{model_name}`",
+        "",
+    ]
+    for msg in visible:
+        role_label = "You" if msg["role"] == "user" else "AI"
+        lines.append(f"## {role_label}")
+        lines.append("")
+        lines.append(msg.get("content", ""))
+        lines.append("")
+    return "\n".join(lines)
+
+
 def stream_answer(console: Console, client: OpenAI, model: str, messages: list,
                   markdown_on: bool) -> tuple:
     """Stream a completion; return (answer, usage).
@@ -50,9 +100,6 @@ def stream_answer(console: Console, client: OpenAI, model: str, messages: list,
     chunk (or None when the provider did not send one). Callers accumulate
     it into SessionStats.
     """
-    response = client.chat.completions.create(
-        model=model, messages=messages, stream=True
-    )
     answer = ""
     usage = None
     stamp = datetime.now().strftime("%H:%M")
@@ -68,11 +115,9 @@ def stream_answer(console: Console, client: OpenAI, model: str, messages: list,
     if not markdown_on or not console.is_terminal:
         # Plain streaming: no Status/Live control codes, so nothing can
         # leak as "?[2K" / "?[?25h" on PowerShell or dumb terminals.
-        for chunk in response:
-            maybe_usage = _chunk_usage(chunk)
+        for text, maybe_usage in iter_stream_chunks(client, model, messages):
             if maybe_usage:
                 usage = maybe_usage
-            text = _chunk_text(chunk)
             if text:
                 if markdown_on:
                     # non-terminal but markdown requested: accumulate
@@ -103,11 +148,9 @@ def stream_answer(console: Console, client: OpenAI, model: str, messages: list,
     status = console.status("thinking...", spinner="dots")
     status.start()
     try:
-        for chunk in response:
-            maybe_usage = _chunk_usage(chunk)
+        for text, maybe_usage in iter_stream_chunks(client, model, messages):
             if maybe_usage:
                 usage = maybe_usage
-            text = _chunk_text(chunk)
             if not text:
                 continue
             answer += text
@@ -174,21 +217,8 @@ def save_conversation(console: Console, conversation: list, model_name: str,
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         path = Path(f"chat_{timestamp}.md")
 
-    lines = [
-        f"# Chat Export - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        "",
-        f"Model: `{model_name}`",
-        "",
-    ]
-    for msg in visible:
-        role_label = "You" if msg["role"] == "user" else "AI"
-        lines.append(f"## {role_label}")
-        lines.append("")
-        lines.append(msg.get("content", ""))
-        lines.append("")
-
     try:
-        path.write_text("\n".join(lines), encoding="utf-8")
+        path.write_text(build_export_text(conversation, model_name), encoding="utf-8")
     except OSError as e:
         console.print(f"[red]Failed to save conversation: {e}[/red]")
         return
