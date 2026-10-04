@@ -46,24 +46,26 @@ Chat with hundreds of models from your terminal — with streaming Markdown resp
 
 ## 🚀 Installation
 
-No virtual environment, no config files — install once, run from anywhere.
+No virtual environment, no config files — one command on Windows, Linux, or macOS:
 
-### Option 1: pipx (recommended — isolated, `ai-cli` always on PATH)
+```bash
+git clone https://github.com/slawti/ai-cli.git
+cd ai-cli
+python install.py
+```
 
-```powershell
+This installs [pipx](https://pipx.pypa.io/) if needed, then installs `ai-cli` isolated via pipx, adds the install folder to your PATH automatically, and verifies the install. Re-run it anytime to upgrade. (`python install.py --check` shows what it would do; `--yes` accepts all prompts.)
+
+> If `ai-cli` isn't recognized right after installing, **restart your terminal** (PATH changes apply to new terminals). On Linux with plain `pip`, you may need `export PATH="$HOME/.local/bin:$PATH"` instead.
+
+### Manual install (without install.py)
+
+```bash
 pip install pipx
 pipx ensurepath
 # restart your terminal, then:
 pipx install git+https://github.com/slawti/ai-cli.git
 ```
-
-### Option 2: plain pip (no new tools)
-
-```powershell
-pip install --user git+https://github.com/slawti/ai-cli.git
-```
-
-> If `ai-cli` isn't recognized afterwards, add Python's `Scripts` folder to PATH (the python.org installer offers this checkbox; with `pipx`, `ensurepath` handles it).
 
 Then:
 

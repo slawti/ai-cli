@@ -1,9 +1,9 @@
 # AGENTS.md
 
 ## Run
-- Dev setup: `pip install -e .` (uses `.venv`); end users install via pipx/pip from git (see README) — no venv needed. Launch with `ai-cli`, `python -m ai_cli`, or legacy `python main.py`.
+- Dev setup: `pip install -e .` (uses `.venv`); end users run `python install.py` from a clone (pipx bootstrap + PATH fix, all OSes) — no venv needed. Launch with `ai-cli`, `python -m ai_cli`, or legacy `python main.py`.
 - API key resolution: `--api-key` > `OPENROUTER_API_KEY` env > project `.env` > `~/.ai-cli/.env`. Missing key + TTY triggers a one-time secure prompt that saves to `~/.ai-cli/.env`; headless raises `ConfigError`. Never commit a key (project `.env` is gitignored).
-- No tests, lint, or CI exist. Verify with `python -m py_compile ai_cli/cli.py ai_cli/ui.py ai_cli/tui.py ai_cli/chat.py` plus small import-level checks.
+- No tests, lint, or CI exist. Verify with `python -m py_compile ai_cli/cli.py ai_cli/ui.py ai_cli/tui.py ai_cli/chat.py install.py` plus small import-level checks.
 
 ## Source of truth
 - Entry: `ai_cli.cli:main` (console script in `pyproject.toml`).
